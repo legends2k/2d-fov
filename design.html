@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="pandoc">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <meta name="author" content="Sundaram Ramaswamy">
+  <meta name="dcterms.date" content="2016-04-13">
+  <title>Field of View and Line of Sight in 2D</title>
+  <style type="text/css">code{white-space: pre;}</style>
+  <script src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default" type="text/javascript"></script>
+  <!--[if lt IE 9]>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
+  <![endif]-->
+</head>
+<body>
+<header>
+<h1 class="title">Field of View and Line of Sight in 2D</h1>
+<h2 class="author">Sundaram Ramaswamy</h2>
+<h3 class="date">April 13, 2016</h3>
+</header>
+<!-- Pandoc Markdown with LaTeX math equation -->
+<!-- $ pandoc design.md
+--mathjax=http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default
+-t html5 -sNo design.html -->
+<p>Consider a 2D world with polygonal buildings; the edges of the polygon are the building walls. Say a viewer is present in this world either indoor or outdoor. Given the observer's vision parameters — viewing direction, vision distance or the reach of sight and the angle of vision — we have to find the region visible to the observer i.e. the field of view (<em>FoV</em>) is to be determined. With no obstacles it would be a <a href="https://en.m.wikipedia.org/wiki/Circular_sector">sector</a>, made of two edges (radii) and a connecting arc; see figure 1. Additionally, given a point in the world, we should be able to quickly tell if this point is visible to the observer i.e. line of sight (<em>LOS</em>) queries on a given point should be serviced. Both these operations should be performed in a way efficient enough to use it in real-time rendering scenarios.</p>
+<figure>
+<img src="Figures/fov_no_obstacles.svg" alt="Figure 1" /><figcaption>Figure 1</figcaption>
+</figure>
+<p>The observer's position is shown as the red dot, the arrow points to the viewing direction, <em>r</em> denotes vision distance and <em>θ</em> is half the angle of view.</p>
+<h1 id="input"><span class="header-section-number">1</span> Input</h1>
+<ul>
+<li>Set of polygons; includes the world boundary</li>
+<li>FoV Parameters
+<ul>
+<li>Position of viewer</li>
+<li>Viewing direction, <span class="math inline">\(\hat{v}\)</span></li>
+<li>Angle of vision, 2θ &lt; 180°</li>
+<li>Vision distance, <span class="math inline">\(r\)</span></li>
+</ul></li>
+</ul>
+<h2 id="polygons-and-edges"><span class="header-section-number">1.1</span> Polygons and Edges</h2>
+<p>When describing a world in 2D, buildings naturally map to polygons and are thus taken as input by the algorithm. However, technically vision is blocked by walls i.e. polygon edges; moreover, dealing with polygon edges gives greater granularity and better control as we will mostly be dealing with geometric primitives when performing intersection testing. Hence, for the most part, the algorithm considers edges directly without worrying about the higher-level abstraction, polygon.</p>
+<h1 id="basic-algorithm"><span class="header-section-number">2</span> Basic Algorithm</h1>
+<p>An interesting initial idea that occurs is clipping the vision sector with the polygon paths. However, this is a vision problem, and trying to solve it with path clipping will not work; we will just end up with an incorrect result. This is understandable as clipping just cuts away the intersection of two regions, while for vision we need to cut not just the intersection, but everything behind it; also this is to be done radially. Figure 2 shows the result of clipping (left) along with the expected result for this configuration (right).</p>
+<figure>
+<img src="Figures/clip.svg" alt="Figure 2" /><figcaption>Figure 2</figcaption>
+</figure>
+<p>In the physical world, we see things when unhindered light rays reach the eye. Intuitively, vision can be determined by doing the converse i.e. casting rays from the eye into the world. For a light source, the rays emanating from it would go in all directions. When implementing it, rays are shot at some regular interval radially e.g. a ray every 5° would mean shooting 72 rays for full circle coverage. The ray is assumed to go on until it is blocked by an edge. Shooting rays in all 360° and finding the reach of a light source in 2D is a solved problem <a href="#references">[1]</a>. The accuracy of this method depends on the interval at which rays are shot; smaller interval gives denser ray distribution.</p>
+<figure>
+<img src="Figures/ray_cast.svg" alt="Figure 3" /><figcaption>Figure 3</figcaption>
+</figure>
+<p>Shooting rays is a fancy way of saying testing for ray – line segment intersection. For a given ray, if there are <strong>m</strong> segments, <strong>m</strong> tests are done to find the edge closest to the ray that blocks it. So for any ray casting algorithm, to shoot <strong>n</strong> rays, on a set of <strong>m</strong> edges, <strong>n × m</strong> tests are to be performed. However cheap the ray – line segment (edge) intersection testing may be, for a huge world with many lights this may become prohibitively expensive.</p>
+<p>Let us call the edge that blocks a ray as the <em>blocking edge</em>. Figure 3 highlights them in red. The point where the ray hits the blocking edge would be the <em>hit point</em>. Once all hit points are found, they should be connected circularly i.e. all hit points are sorted by angle, and connected by lines to get the region lit by the light source. The result is essentially an irregular, closed path. Note that when connecting hit points in this fashion, some corners or parts of the polygons are chopped off, leading to an incorrect or less accurate light field. This can be improved by decreasing the interval at which rays are shot; lesser interval means more rays, greater coverage, better output at the cost of performance.</p>
+<p>We have discussed, with the help of this light reach problem, the basic approach we will take to solve our problem: ray casting. Note that the light rays originating from the source travel in all directions and with no limit in distance until it hits an obstacle. Having no limits makes it a simpler problem compared to the one in hand where both angle and distance of vision are bounded. We will discuss why it is so later in <a href="#blocking-edges-and-angle-points">§3</a>.</p>
+<h2 id="an-optimisation"><span class="header-section-number">2.1</span> An Optimisation</h2>
+<p>Instead of shooting rays in all directions (at some interval), a common optimisation is to shoot rays only in the directions where edge endpoints are present. This should drastically reduce the number of intersection tests required; the aforementioned <strong>n</strong> term should become smaller. An additional advantage of this method is greater accuracy; we are no longer at the mercy of the interval chosen for the field of view to be correct.</p>
+<figure>
+<img src="Figures/ray_cast_opt.svg" alt="Figure 4" /><figcaption>Figure 4</figcaption>
+</figure>
+<p>We will call these edge endpoints, which gives the angle to shoot rays at, as <em>angle points</em>. This term might seem redundant and pointless as a substitute to endpoints, but it will have its use down the line. Angle points are points at which rays of sight are shot. In figure 4, angle points are shown in red, blue and black; rays are shot at all of them. Those that lay closest to their ray got converted to hit points, shown in red. Those to which their ray never reached are in black; these rays hit a more closer lying blocking edge and created hit points; these are shown in blue.</p>
+<h2 id="vision-beyond-corners"><span class="header-section-number">2.2</span> Vision beyond corners</h2>
+<p>Though shooting rays only to edge endpoints would do, there is a small wrinkle to iron out. In figure 4, note that the ray shot to a polygon's corner hits one of the edges that form the corner and does not proceed further. However, vision should extend beyond the corner in some cases. A clever way to correct this problem is demonstrated with an interactive article by <a href="#references">[2]</a>.</p>
+<p>The idea is make two auxiliary rays by tilting the primary ray — the ray to the edge's endpoint — by an iota angle both clockwise and counter-clockwise. If vision has to extend beyond a corner, one of these auxiliary rays would get past the corner thereby deducing visibility beyond. The downside is for every angle point, we now have to shoot three rays, not one, from the observer; this triples our expenses. It would be good if we could minimize the number of angle points we need to process.</p>
+<figure>
+<img src="Figures/ray_cast_aux.svg" alt="Figure 5" /><figcaption>Figure 5</figcaption>
+</figure>
+<p>Auxiliary rays of a primary are shown in orange; the angle of tilt (between an orange and black ray) is exaggerated here for clarity, but it would me much smaller, say, half a degree.</p>
+<p>An easy optimisation would be to find if both edges forming the corner are exposed or one of them is hidden by the other. If both are visible then no auxiliary rays are needed since vision cannot extend beyond; in figure 4, the apex of the triangle is an exposed corner; auxiliary rays are redundant here as vision cannot be extending beyond. Auxiliary rays are needed only if one of the two edges is hidden to the viewer; both cannot be hidden since we are looking at every corner of a polygon in isolation — two edges and the point they meet (figure 6, black arrows and blue dot). Even when one of the edges is hidden, sending two auxiliary rays is redundant; one can be avoided as only one will go unblocked beyond the corner. In figure 5, the auxiliary ray formed by rotating the primary clockwise is redundant.</p>
+<figure>
+<img src="Figures/exposed_hidden_corner.svg" alt="Figure 6" /><figcaption>Figure 6</figcaption>
+</figure>
+<p><a href="https://en.wikipedia.org/wiki/Separating_axis_theorem">Separating axis theorem</a> can be applied to find if one of the edges of the corner block another. Projecting both edge vectors on to the vector perpendicular to the primary ray would give results with differing signs if one of the edges block the other. Also depending on the sign of projection of the first edge, we can know which of the two auxiliary rays is needed. In figure 6, the three possible situations are shown at the top and the projection results are show at the bottom; the black dot denotes the viewer position from where the primary ray (red) is shot. The edge vectors (black) are projected on to the primary perpendicular vector (green). When no auxiliary rays are needed, both projections give negative values, since both edge vectors are in the negative half-space of the perpendicular. In the remaining two cases, where auxiliaries (orange) are needed, the signs of the projection are different for the vectors; when the sign is negative for the longer edge vector, a clockwise rotated auxiliary ray is enough and when it is positive, a counter-clockwise rotated auxiliary ray is will do.</p>
+<h1 id="blocking-edges-and-angle-points"><span class="header-section-number">3</span> Blocking Edges and Angle Points</h1>
+<p>For the problem considered here, vision is bounded in angle and distance; this leads us to interesting situations.</p>
+<ul>
+<li>Not all endpoints become angle points; only the ones within the view sector count.
+<ul>
+<li>This should at least halve the number of rays shot; <strong>n</strong> should become even lesser now.</li>
+<li>To reap this benefit, effort needs to be spent in filtering angle points from endpoints. The technique used to prune should be quick so that filtering itself does not take too much time.</li>
+</ul></li>
+<li>Likewise, most edges will not be potentially blocking; just the ones which are contained or cut by the sector matter.
+<ul>
+<li>This will reduce the number of intersection tests needed; the <strong>m</strong> term should become lesser.</li>
+<li>For this too the onus of quickly rejecting edges that do not count is on us.</li>
+</ul></li>
+</ul>
+<p>A prime difference or deviation from the basic algorithm explained in <a href="#basic-algorithm">§2</a> is that there can be angle points that do not come from the set of edge endpoints. There may be more angle points needed to be found. Consider the configurations shown in figure 7 and 8. The edge endpoints are outside the vision sector, and thus are not useful as angle points. All angle points needed to correctly determine the field of view (shown in black, blue and red) do not come from edge endpoints. Every one of these are necessary; failing to shoot a ray at any of them would lead to an incorrect determination of the visible region. How are they different and how do we find them?</p>
+<p>Since vision is bounded by the viewing angle, two angle points are essential and are to be taken implicitly irrespective of the presence of an edge. They come from the far endpoints of the sector's edges. Rays are shot at them and hit points are determined. Figure 7 shows one of these implicit angle points in black; the angle point due to the sector's right edge endpoint. The ray shot to it is blocked by an edge, leading to the blue hit point. Another ray shot to the angle point due to the sector's left edge endpoint is unhindered and thus the angle point itself becomes the hit point, shown in blue. So the blue ones are easy to determine; they need no tests. Their position is fixed, relative to the vision sector's position and orientation.</p>
+<p>Consider the red angle point (turned into a hit point since the ray is unhindered) at the intersection of the sector's arc and the edge. This one needs another intersection testing: arc – line segment intersection test. These angle points are needed when an edge intersects the sector's arc.</p>
+<figure>
+<img src="Figures/new_angle_points.svg" alt="Figure 7" /><figcaption>Figure 7</figcaption>
+</figure>
+<p>Ray is shown with an arrow head while the edge has endpoints.</p>
+<figure>
+<img src="Figures/sector_end_angle_pts.svg" alt="Figure 8" /><figcaption>Figure 8</figcaption>
+</figure>
+<p>With these considerations, we list the cases where angle points occur:</p>
+<ul>
+<li>Any edge endpoint contained by the vision sector</li>
+<li>Any point on the sector's arc where an edge intersects it</li>
+</ul>
+<p>Likewise, potentially blocking edges are the ones fully or partially contained by the sector.</p>
+<p>The problem now becomes that of compiling the set of angle points (finding new ones and filtering unnecessary endpoints) and the set of potentially blocking edges (pruning surely non-blocking edges). This should be done fast, rejecting invalid elements as early as possible, so that cycles are not wasted in processing something whose result will ultimately be discarded. The aim is to reduce the terms <strong>n</strong> (number of rays shot = count of angle point) and <strong>m</strong> (number of line segments to test the ray against = count of potential blocking edges), giving us a fast algorithm to determine the FoV.</p>
+<h2 id="culling"><span class="header-section-number">3.1</span> Culling</h2>
+<p><a href="#references">[3]</a> suggests that an ideal culling algorithm (in reality, costly and riddled with floating-point precision problems) would only allow the exact visible set, while a good one would reject most invisible cases accepting the definitely and possibly visible ones. It will be conservative about rejecting potentially visible ones. In other words, unless it cannot be absolutely sure that an edge would <em>not</em> hamper visibility, it does <em>not</em> reject it.</p>
+<h3 id="broad-phase-early-trivial-rejection"><span class="header-section-number">3.1.1</span> Broad Phase — Early, Trivial Rejection</h3>
+<p>A naïve idea to reject irrelevant endpoints and edges would be to only test if the edge's endpoints are within the sector; this would work for angle points but is insufficient for blocking edges, as it would fail in configurations where the edge endpoints are out but the edge blocks visibility; see figure 7 and 8. Before going to the more granular entity, the endpoints, if we can reject the edge, the endpoints testing can be skipped altogether.</p>
+<h4 id="edge-bounding-circle-intersection"><span class="header-section-number">3.1.1.1</span> Edge – Bounding Circle Intersection</h4>
+<p>If a line segment's closest point to the circle centre is within the circle then it is either contained by it or they intersect. This idea is detailed here <a href="#references">[4]</a>. Using this with the edge and the sector's bounding circle, we can reject all edges that are disjoint from the bounding circle. Post this stage, all edges that have nothing to do with this circle are not considered. Since this is not a test to find the actual points of intersection but to just know whether the edge is disjoint, the result is boolean and is fairly fast. All we need to implement this test is a couple of vector subtractions (making the vector) and dot products: one to find the closest point (by projection) and another to compute the squared distance to the circle's centre from there.</p>
+<p>Results of this test is shown in figure 9. The vision sector's bounding circle is drawn with dashes. The blue dot on every edge denotes its closest point to the circle's centre. The green edges are accepted; the magenta ones are accepted too but are false positives. The red ones are rejected. An edge that is tangential to the bounding circle is rejected as well since it will not occlude vision.</p>
+<figure>
+<img src="Figures/line_seg_circle_xsect.svg" alt="Figure 9" /><figcaption>Figure 9</figcaption>
+</figure>
+<p>To reject false positives aggressively, the idea of testing if the closest point is within the sector, as opposed to the circle, is charming. However, this is incorrect as it will also reject positives; in figure 9, along with the magenta ones, the green edge having its closest point outside the sector would also be rejected.</p>
+<h4 id="point-with-respect-to-sector"><span class="header-section-number">3.1.1.2</span> Point with respect to Sector</h4>
+<p>Given a point and a sector, it is easy to quickly determine if the point is</p>
+<ol type="1">
+<li>behind the viewer</li>
+<li>in front of the viewer and
+<ol type="a">
+<li>beyond the viewing distance</li>
+<li>within viewing distance and
+<ol type="i">
+<li>within the sector</li>
+<li>outside the sector but inside its bounding semicircle</li>
+</ol></li>
+</ol></li>
+</ol>
+<p>with just dot and cross products. Since cross product is not defined in 2D, we promote our vectors to 3D by letting z be 0. Though cross product results in a vector, as z = 0, elements pertaining to x and y would be 0, and only the z quantity will be non-zero (if the vectors are not parallel); thus we get a scalar result from this cross product; refer <a href="#references">[5]</a> for different definitions of cross product in 2D.</p>
+<p>Let the vector from the circle centre to the point be <span class="math inline">\(\vec u\)</span> and the sector's edge vectors be <span class="math inline">\(\vec{e_1}, \vec{e_2}\)</span>. We already have the viewing direction, <span class="math inline">\(\hat v\)</span>.</p>
+<ol type="1">
+<li>If <span class="math inline">\(\vec u \cdot \hat v \le 0\)</span>, the point is behind the viewer.</li>
+<li>else if <span class="math inline">\(\vec u \cdot \vec u = \|\vec u\|^2 &gt; r^2\)</span>, the point is beyond viewing distance.</li>
+<li>else if <span class="math inline">\(sign(\vec{e_1} \times \vec u) = sign(\vec u \times \vec{e_2})\)</span> then the point is within the sector.</li>
+<li>else it is in the bounding semicircle but outside the sector.</li>
+</ol>
+<p>We have used two optimisations that need explanation. We compare squares of the lengths (2) instead of just the lengths since finding the length would mean using <code>sqrt</code>; we avoid this and do an optimisation that is usual in computer graphics applications <a href="#references">[7]</a>. To check if the point is within the sector (3), we could have found the actual angle it subtends with the sector's first edge and see if it is within the allowed angle of view (2θ). However, we need the trigonometry function <code>acos</code> for this, which may be a costlier than doing a couple of cross products which involves only arithmetic operations.</p>
+<p>If an edge survived through the previous test, we put its endpoints through this test to classify where they stand. Figure 10 shows how the situation is now; the grey points are behind (1), red ones are beyond (2), green endpoints are within the sector (3) and the magenta one is in the bounding semicircle but outside the sector (4).</p>
+<figure>
+<img src="Figures/point_in_sector.svg" alt="Figure 10" /><figcaption>Figure 10</figcaption>
+</figure>
+<p>Angle points and blocking edges can be determined based on the results</p>
+<ol type="1">
+<li>If both ends are behind (1), it has no way of obscuring vision; prune — stop further processing.</li>
+<li>If both ends are within the sector (3), mark both as angle points and the edge as blocking; stop further processing.</li>
+<li>If one of them is within the sector (3) and the other is not — (1), (2), (4) — mark the one within as angle point and the edge as blocking. This edge may cut the sector's arc and give a new angle point.</li>
+<li>If both are not within the sector — (2), (4) — endpoints are not angle points, but it may cut the sector's arc, giving new angle points. Edge may be blocking if it cuts the sector's arc or edges.</li>
+</ol>
+<p>For cases 3 and 4, we need further tests to find angle points, that are not endpoints, the edge contains and whether the edge is blocking. This leads us to the narrow phase of culling.</p>
+<h2 id="narrow-phase"><span class="header-section-number">3.2</span> Narrow Phase</h2>
+<p>In this phase we weed out more false positives with costlier tests to improve performance when shooting rays. We may perform an edge – sector arc and/or an edge – edge intersection test.</p>
+<p>However, before performing the slightly costly segment – arc intersection test (it has a square root and more than three branch operations), we can use the results of the previous test to see if the test is really needed. The test is needed only when the edge has a possibility of intersecting the arc. If both the endpoints are within the sector's bounding circle, the edge has no way of intersecting the circle; the edge has a possibility of intersecting the sector's arc only if either of its endpoints are in front of the viewer and outside the bounding circle (case 2.a in <a href="#point-with-respect-to-sector">§3.1.1.2</a>).</p>
+<table>
+<caption><strong>Table 1.</strong> <em>Edge endpoint possibilities and states</em></caption>
+<colgroup>
+<col style="width: 9%" />
+<col style="width: 16%" />
+<col style="width: 28%" />
+<col style="width: 45%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: center;">#</th>
+<th style="text-align: left;">End A</th>
+<th style="text-align: left;">End B</th>
+<th style="text-align: left;">State</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">1</td>
+<td style="text-align: left;">Within</td>
+<td style="text-align: left;">Within (2.b.i)</td>
+<td style="text-align: left;">Angle points: A, B • Blocking</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">2</td>
+<td style="text-align: left;">Within</td>
+<td style="text-align: left;">Behind (1)</td>
+<td style="text-align: left;">Angle point: A • Blocking</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">3</td>
+<td style="text-align: left;">Within</td>
+<td style="text-align: left;">Semicircle (2.b.ii)</td>
+<td style="text-align: left;">Angle point: A • Blocking</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">4</td>
+<td style="text-align: left;">Within</td>
+<td style="text-align: left;">Outside (2.a)</td>
+<td style="text-align: left;">Angle point: A • Blocking • May intersect arc</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">5</td>
+<td style="text-align: left;">Behind</td>
+<td style="text-align: left;">Behind</td>
+<td style="text-align: left;">Prune</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">6</td>
+<td style="text-align: left;">Behind</td>
+<td style="text-align: left;">Outside</td>
+<td style="text-align: left;">May intersect arc • May be blocking</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">7</td>
+<td style="text-align: left;">Behind</td>
+<td style="text-align: left;">Semicircle</td>
+<td style="text-align: left;">May be blocking</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">8</td>
+<td style="text-align: left;">Semicircle</td>
+<td style="text-align: left;">Semicircle</td>
+<td style="text-align: left;">May be blocking</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">9</td>
+<td style="text-align: left;">Semicircle</td>
+<td style="text-align: left;">Outside</td>
+<td style="text-align: left;">May intersect arc • May be blocking</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">10</td>
+<td style="text-align: left;">Outside</td>
+<td style="text-align: left;">Outside</td>
+<td style="text-align: left;">May intersect arc • May be blocking</td>
+</tr>
+</tbody>
+</table>
+<p>Items 1, 2, 3 and 5 are already dealt with in the broad phase and needs nothing further. Item 4 needs an edge – arc intersection test just to know if there is an additional angle point; already in the broad phase we marked one of its endpoints as angle point and the edge as blocking. Items 6 to 10 are of the most interest in the narrow phase. Items 6, 9 and 10 need edge – arc intersection testing to know if any angle points are present due to the intersection, and if so, the edge should be marked blocking. If these items fail in the test, they join items 7 and 8; all of these cannot be having any angle points, but should still be put through edge – edge intersection test to know if they are blocking.</p>
+<h3 id="edge-sector-arc-intersection"><span class="header-section-number">3.2.1</span> Edge – Sector Arc Intersection</h3>
+<p>For items 4, 6, 9 and 10 in table 1 we check if the edge cuts the sector's arc with a line segment – arc intersection test <a href="#references">[6]</a>. If it does, mark the intersection point(s) as angle point(s) and the edge as blocking. No further processing is needed. If it does not, the edge cannot be having any angle point but pass the edge to the next test to know if it is blocking.</p>
+<p>The test is essentially a line – circle intersection test and hence would result in two points. The points that lie on both the line segment and the arc are deemed points of intersection. A minor optimisation that can be done here is if both points of intersection are behind the viewer then the line segment cannot be blocking or having any angle point, hence the edge can be discarded without any further processing.</p>
+<figure>
+<img src="Figures/line_seg_arc_xsect.svg" alt="Figure 11" /><figcaption>Figure 11</figcaption>
+</figure>
+<p>In figure 11, the grey edge with an endpoint outside and another behind is tested but both intersection points are behind (magenta) and is thus rejected. The green edge with both points in the semicircle is never tested. The red one with one of its endpoints outside is tested but the only intersection point found (blue) is not on the arc; this edge cannot be having any angle points but is sent to the next stage (edge – edge test) to test if it is blocking. All other edges (black) with one or both its endpoints outside the bounding circle and having valid (red) intersection point(s) are marked blocking, with the intersection points marked as angle points; each such edge corresponds to one of items 4, 6, 9 and 10 in table 1.</p>
+<h3 id="edge-sector-edge-intersection"><span class="header-section-number">3.2.2</span> Edge – Sector Edge Intersection</h3>
+<p>For items 7 and 8 which never entered the previous test and for items (6, 9 and 10) which entered but no intersection points were found, there can be no angle points the edge bears: both its endpoints are not within the sector and no new angle point is lying on the arc. However, such edges cannot be discarded as they may still be blocking (see figure 8) or unblocking (see figure 10; the edge with magenta endpoint). We have two options: be on the safer side and mark them blocking or test them against the sector's edges to be sure. By doing the former, for every false positive edge — an edge disjoint from the vision sector — we pay with <strong>n</strong> line segment – line segment tests during the ray shooting phase, as every ray shot should be tested against every potentially blocking edge. Instead of paying <strong>n</strong> times for a false positive, paying <strong>n + 2</strong> (at worst) for a positive is a better proposition, so we test the edge against both the sector edges; if it intersects any, mark it blocking.</p>
+<figure>
+<img src="Figures/seg_seg_xsect.svg" alt="Figure 12" /><figcaption>Figure 12</figcaption>
+</figure>
+<p>For items 6 to 10, figure 12 contains two edges each: one positive (green), one negative (red). From the figure it is apparent that this test has greater chances of rejecting edges irrelevant to vision.</p>
+<h1 id="shooting-rays"><span class="header-section-number">4</span> Shooting Rays</h1>
+<p>We have all the angle points and blocking edges. Before casting rays, the angle points are to be sorted by angle so that the final field of view figure appears correctly when the hit points are connected by edges and arcs. Additionally, if two or more angle points and the viewer position are collinear, then multiple rays will be shot in the same direction; duplicate angle points need to be discarded to avoid redundant rays.</p>
+<p>For the sorting, the technique explained in <a href="#point-with-respect-to-sector">§3.1.1.2</a> of using the cross product to find if a point is within the viewing sector angle can be used. Duplicate angle points can be dealt with easily again with cross product. For every angle point, before casting the ray, it is crossed with the previous ray, if the result is zero then the vectors are linearly-dependant (parallel) and thus can be ignored.</p>
+<p>Primary rays are shot at the sorted angle points. Before shooting a ray at an angle point, if we know it is an edge endpoint, and not an intersection point, then auxiliary rays are to be shot as needed; refer <a href="#vision-beyond-corners">§2.2</a> for details on this. Auxiliary rays are to be shot only for angle points that are edge endpoints and not for the ones from intersection points, as the latter cannot be polygon corners, so vision should not be extending beyond.</p>
+<p>For every ray shot, we find the intersection point of the ray and the edge closest to it. This is the hit point for the ray. If this point lies beyond the vision distance, <strong>r</strong>, then we take the hit point as the point along the ray that is <strong>r</strong> units away from the viewer i.e. we drag the hit point back until the distance to it from the viewer becomes <strong>r</strong>. For every hit point found, we check if it is at the arc boundary, if this and the previous point are at the arc boundary, then we connect them both with an arc else with a line. However, there is a small problem in doing this blindly.</p>
+<figure>
+<img src="Figures/hitpoints_on_arc.svg" alt="Figure 13" /><figcaption>Figure 13</figcaption>
+</figure>
+<p>In figure 13, the hit points (numbering from right to left) 1 and 2 are on the arc, they should be connected by an arc. Same is the case with hit points 3 and 4. However, hit point 2 and 3 should be connected by a line since there is an edge cutting the arc. When hit point 3 is found and confirmed that this and the previous hit point are on the arc, check, before connecting them with an arc, whether the line connecting them is parallel to the closest edge on which hit point 3 lies; connect them with a line if it is parallel.</p>
+<h1 id="line-of-sight"><span class="header-section-number">5</span> Line of Sight</h1>
+<p>A line of sight query is to answer the question of whether a given point, <strong>X</strong>, within the world, is visible to a viewer, with the viewer's parameters defined (<a href="#input">§1</a>). Doing this is easy once the blocking edges and angle points are found. First we classify <strong>X</strong> according to <a href="#point-with-respect-to-sector">§3.1.1.2</a>. If it's not within the sector, we return <code>false</code>. If it is within, we check if the line segment formed by connecting X to the viewer is intersecting any of the blocking edges. If it is not intersecting, we return <code>true</code>, since the line of sight or the ray from the viewer to the subject is unblocked and is thus visible.</p>
+<h1 id="references"><span class="header-section-number">6</span> References</h1>
+<ol type="1">
+<li><a href="http://www.redblobgames.com/articles/visibility">2D Visibility</a> by Amit Patel</li>
+<li><a href="http://ncase.me/sight-and-light">Sight &amp; Light</a> by Nicky Case</li>
+<li>§14.2 Culling Techniques, <em>Real-Time Rendering</em>, Third Edition by Thomas Akenine-Möller, Eric Haines and Naty Hoffman</li>
+<li><a href="http://doswa.com/2009/07/13/circle-segment-intersectioncollision.html">Line segment to circle collision/intersection detection</a> by David Stygstra</li>
+<li>§A.2.1, <em>3-D Computer Graphics</em> by Samuel R. Buss</li>
+<li><a href="http://www.geometrictools.com/Documentation/IntersectionLine2Circle2.pdf">Intersection of Linear and Circular Components in 2D</a> by David Eberly</li>
+<li>§2.2.5, <em>Essential Mathematics for Games and Interactive Applications</em>, Second Edition by James Van Verth and Lars M. Bishop</li>
+<li><em>3D Math Primer for Graphics and Game Development</em>, Second Edition by Fletcher Dunn and Ian Parberry</li>
+<li><em>Mathematics for 3D Game Programming and Computer Graphics</em>, Third Edition by Eric Lengyel</li>
+</ol>
+</body>
+</html>
