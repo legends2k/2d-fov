@@ -2,14 +2,17 @@
 <html>
     <head>
         <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+        <meta name="viewport"
+              content="width=device-width,
+                       initial-scale=1.0,
+                       user-scalable=yes">
         <meta name="author" content="Sundaram Ramaswamy">
 
-        <title>2D Top-Down Field of Vision</title>
+        <title>Field of View and Line of Sight in 2D</title>
 
         <style>
          body{
-             margin:0;
+             text-align: center;
              background: #eee;
          }
         </style>
@@ -23,17 +26,44 @@
         </header>
         <div>
             <p>
-                Move mouse to change viewing direction. Click to reposition viewer.<br/><br/>
-                <label for="chkDebug">Debug View</label>
-                <input type="checkbox" name="chkDebug" onchange="toggleDebugView()">
+                Move mouse to change viewing direction.
+                Click to reposition viewer.<br />
             </p>
-            <canvas id="canvas2d" width="640" height="480" />
+            <p>
+                <canvas id="canvas2d" width="640" height="480" />
+            </p>
         </div>
         <div>
             <p>
+                <label for="chkDebug">Debug View</label>
+                <input type="checkbox"
+                       name="chkDebug"
+                       onchange="toggleDebugView()">
+            </p>
+            <p>
                 See the <a href="design.html">design document</a> for details.
+                Visit the <a href="https://github.com/legends2k/2d-fov">project
+                repository</a>.
             </p>
         </div>
+        <footer>
+            <address> Sundaram Ramaswamy,
+                <script type="text/javascript"> <!--
+                                               h='&#x79;&#x61;&#104;&#x6f;\
+&#x6f;&#46;&#x63;&#x6f;&#x6d;'; a='&#64;';n='&#108;&#x65;&#x67;&#x65;&#110;\
+&#100;&#x73;&#50;&#x6b;';e=n+a+h;
+                 document.write('<a h'+'ref'+'="ma'+'ilto'+':'+e+'" clas'+
+                                's="em' + 'ail">'+e+'<\/'+'a'+'>'); // -->
+                </script>
+                <noscript>
+                    &#108;&#x65;&#x67;&#x65;&#110;&#100;&#x73;&#50;&#x6b;&#32;
+                    &#x61;&#116;&#32;&#x79;&#x61;&#104;&#x6f;&#x6f;&#32;
+                    &#100;&#x6f;&#116;&#32;&#x63;&#x6f;&#x6d;
+                </noscript>
+                </address>
+        </footer>
+        <p><small>Best viewed in Firefox, Chrome,
+            Opera, Edge or Safari.</small></p>
     </body>
 </html>
 
