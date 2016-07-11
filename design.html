@@ -7,7 +7,7 @@
   <meta name="author" content="Sundaram Ramaswamy">
   <title>Field of View and Line of Sight in 2D</title>
   <style type="text/css">code{white-space: pre;}</style>
-  <script src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default" type="text/javascript"></script>
+  <script src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_SVG" type="text/javascript"></script>
   <!--[if lt IE 9]>
     <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
   <![endif]-->
@@ -25,9 +25,9 @@ document.write('<a h'+'ref'+'="ma'+'ilto'+':'+e+'" clas'+'s="em' + 'ail">'+e+'<\
 </script><noscript>&#108;&#x65;&#x67;&#x65;&#110;&#100;&#x73;&#50;&#x6b;&#32;&#x61;&#116;&#32;&#x79;&#x61;&#104;&#x6f;&#x6f;&#32;&#100;&#x6f;&#116;&#32;&#x63;&#x6f;&#x6d;</noscript></p>
 <!-- Pandoc Markdown with LaTeX math equation -->
 <!-- $ pandoc design.md
---mathjax=http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default
+--mathjax=https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_SVG
 -t html5 -sNo design.html -->
-<p>Consider a 2D world with polygonal buildings; the edges of the polygon are the building walls. Say a viewer is present in this world either indoor or outdoor. Given the observer's vision parameters — viewing direction, vision distance or the reach of sight and the angle of vision — we have to find the region visible to the observer i.e. the field of view (<em>FoV</em>) is to be determined. With no obstacles it would be a <a href="https://en.m.wikipedia.org/wiki/Circular_sector">sector</a>, made of two edges (radii) and a connecting arc; see figure 1. Additionally, given a point in the world, we should be able to quickly tell if this point is visible to the observer i.e. line of sight (<em>LOS</em>) queries on a given point should be serviced. Both these operations should be performed in a way efficient enough to use it in real-time rendering scenarios.</p>
+<p>Consider a 2D world with polygonal buildings; the edges of the polygon are the building walls. Say a viewer is present in this world either indoor or outdoor. Given the observer's vision parameters — viewing direction, vision distance or the reach of sight and the angle of vision — we have to find the region visible to the observer i.e. the field of view (<em>FoV</em>) is to be determined. With no obstacles it would be a <a href="http://en.m.wikipedia.org/wiki/Circular_sector">sector</a>, made of two edges (radii) and a connecting arc; see figure 1. Additionally, given a point in the world, we should be able to quickly tell if this point is visible to the observer i.e. line of sight (<em>LOS</em>) queries on a given point should be serviced. Both these operations should be performed in a way efficient enough to use it in real-time rendering scenarios.</p>
 <figure>
 <img src="Figures/fov_no_obstacles.svg" alt="Figure 1" /><figcaption>Figure 1</figcaption>
 </figure>
@@ -74,7 +74,7 @@ document.write('<a h'+'ref'+'="ma'+'ilto'+':'+e+'" clas'+'s="em' + 'ail">'+e+'<\
 <figure>
 <img src="Figures/exposed_hidden_corner.svg" alt="Figure 6" /><figcaption>Figure 6</figcaption>
 </figure>
-<p><a href="https://en.wikipedia.org/wiki/Separating_axis_theorem">Separating axis theorem</a> can be applied to find if one of the edges of the corner block another. Projecting both edge vectors on to the vector perpendicular to the primary ray would give results with differing signs if one of the edges block the other. Also depending on the sign of projection of the first edge, we can know which of the two auxiliary rays is needed. In figure 6, the three possible situations are shown at the top and the projection results are show at the bottom; the black dot denotes the viewer position from where the primary ray (red) is shot. The edge vectors (black) are projected on to the primary perpendicular vector (green). When no auxiliary rays are needed, both projections give negative values, since both edge vectors are in the negative half-space of the perpendicular. In the remaining two cases, where auxiliaries (orange) are needed, the signs of the projection are different for the vectors; when the sign is negative for the longer edge vector, a clockwise rotated auxiliary ray is enough and when it is positive, a counter-clockwise rotated auxiliary ray is will do.</p>
+<p><a href="http://en.wikipedia.org/wiki/Separating_axis_theorem">Separating axis theorem</a> can be applied to find if one of the edges of the corner block another. Projecting both edge vectors on to the vector perpendicular to the primary ray would give results with differing signs if one of the edges block the other. Also depending on the sign of projection of the first edge, we can know which of the two auxiliary rays is needed. In figure 6, the three possible situations are shown at the top and the projection results are show at the bottom; the black dot denotes the viewer position from where the primary ray (red) is shot. The edge vectors (black) are projected on to the primary perpendicular vector (green). When no auxiliary rays are needed, both projections give negative values, since both edge vectors are in the negative half-space of the perpendicular. In the remaining two cases, where auxiliaries (orange) are needed, the signs of the projection are different for the vectors; when the sign is negative for the longer edge vector, a clockwise rotated auxiliary ray is enough and when it is positive, a counter-clockwise rotated auxiliary ray is will do.</p>
 <h1 id="blocking-edges-and-angle-points"><span class="header-section-number">3</span> Blocking Edges and Angle Points</h1>
 <p>For the problem considered here, vision is bounded in angle and distance; this leads us to interesting situations.</p>
 <ul>

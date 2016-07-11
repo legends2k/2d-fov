@@ -10,4 +10,4 @@ This implementation is done in HTML5 Canvas/JavaScript. The only library it uses
 
 [1]: http://legends2k.github.io/2d-fov
 [2]: http://legends2k.github.io/2d-fov/design.html
-[3]: https://github.com/toji/gl-matrix
+[3]: http://github.com/toji/gl-matrix
