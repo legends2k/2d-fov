@@ -17,21 +17,16 @@
 <h1 class="title">Field of View and Line of Sight in 2D</h1>
 <h2 class="author">Sundaram Ramaswamy</h2>
 </header>
-<p><script type="text/javascript">
-<!--
-h='&#x79;&#x61;&#104;&#x6f;&#x6f;&#46;&#x63;&#x6f;&#x6d;';a='&#64;';n='&#108;&#x65;&#x67;&#x65;&#110;&#100;&#x73;&#50;&#x6b;';e=n+a+h;
-document.write('<a h'+'ref'+'="ma'+'ilto'+':'+e+'" clas'+'s="em' + 'ail">'+e+'<\/'+'a'+'>');
-// -->
-</script><noscript>&#108;&#x65;&#x67;&#x65;&#110;&#100;&#x73;&#50;&#x6b;&#32;&#x61;&#116;&#32;&#x79;&#x61;&#104;&#x6f;&#x6f;&#32;&#100;&#x6f;&#116;&#32;&#x63;&#x6f;&#x6d;</noscript></p>
+<p><a href="&#x6d;&#x61;&#x69;&#108;&#116;&#x6f;&#58;&#108;&#x65;&#x67;&#x65;&#110;&#100;&#x73;&#50;&#x6b;&#64;&#x79;&#x61;&#104;&#x6f;&#x6f;&#46;&#x63;&#x6f;&#x6d;" class="email">&#108;&#x65;&#x67;&#x65;&#110;&#100;&#x73;&#50;&#x6b;&#64;&#x79;&#x61;&#104;&#x6f;&#x6f;&#46;&#x63;&#x6f;&#x6d;</a></p>
 <!-- Pandoc Markdown with LaTeX math equation -->
-<!-- $ pandoc design.md
---mathjax=https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_SVG
--t html5 -sNo design.html -->
+<!-- $ pandoc design.md --email-obfuscation=references -t html5 -sNo design.html
+--mathjax=https://cdn.mathjax.org/mathjax/
+latest/MathJax.js?config=TeX-AMS-MML_SVG -->
 <p>Consider a 2D world with polygonal buildings; the edges of the polygon are the building walls. Say a viewer is present in this world either indoor or outdoor. Given the observer's vision parameters — viewing direction, vision distance or the reach of sight and the angle of vision — we have to find the region visible to the observer i.e. the field of view (<em>FoV</em>) is to be determined. With no obstacles it would be a <a href="http://en.m.wikipedia.org/wiki/Circular_sector">sector</a>, made of two edges (radii) and a connecting arc; see figure 1. Additionally, given a point in the world, we should be able to quickly tell if this point is visible to the observer i.e. line of sight (<em>LOS</em>) queries on a given point should be serviced. Both these operations should be performed in a way efficient enough to use it in real-time rendering scenarios.</p>
 <figure>
 <img src="Figures/fov_no_obstacles.svg" alt="Figure 1" /><figcaption>Figure 1</figcaption>
 </figure>
-<p>The observer's position is shown as the red dot, the arrow points to the viewing direction, <em>r</em> denotes vision distance and <em><span class="math inline">\(\theta\)</span></em> is half the angle of view.</p>
+<p>The observer's position is shown as the red dot, the arrow points to the viewing direction, <em>r</em> denotes vision distance and <span class="math inline">\(\theta\)</span> is half the angle of view.</p>
 <h1 id="input"><span class="header-section-number">1</span> Input</h1>
 <ul>
 <li>Set of polygons; includes the world boundary</li>
@@ -39,7 +34,7 @@ document.write('<a h'+'ref'+'="ma'+'ilto'+':'+e+'" clas'+'s="em' + 'ail">'+e+'<\
 <ul>
 <li>Position of viewer</li>
 <li>Viewing direction, <span class="math inline">\(\hat{v}\)</span></li>
-<li>Angle of vision, 2<span class="math inline">\(\theta\)</span> &lt; 180°</li>
+<li>Angle of vision, <span class="math inline">\(2\theta &lt; 180^\circ\)</span></li>
 <li>Vision distance, <span class="math inline">\(r\)</span></li>
 </ul></li>
 </ul>
@@ -139,7 +134,7 @@ document.write('<a h'+'ref'+'="ma'+'ilto'+':'+e+'" clas'+'s="em' + 'ail">'+e+'<\
 <li>else if <span class="math inline">\(sign(\vec{e_1} \times \vec u) = sign(\vec u \times \vec{e_2})\)</span> then the point is within the sector.</li>
 <li>else it is in the bounding semicircle but outside the sector.</li>
 </ol>
-<p>We have used two optimisations that need explanation. We compare squares of the lengths (2) instead of just the lengths since finding the length would mean using <code>sqrt</code>; we avoid this and do an optimisation that is usual in computer graphics applications <a href="#references">[7]</a>. To check if the point is within the sector (3), we could have found the actual angle it subtends with the sector's first edge and see if it is within the allowed angle of view (2<span class="math inline">\(\theta\)</span>). However, we need the trigonometry function <code>acos</code> for this, which may be a costlier than doing a couple of cross products which involves only arithmetic operations.</p>
+<p>We have used two optimisations that need explanation. We compare squares of the lengths (2) instead of just the lengths since finding the length would mean using <code>sqrt</code>; we avoid this and do an optimisation that is usual in computer graphics applications <a href="#references">[7]</a>. To check if the point is within the sector (3), we could have found the actual angle it subtends with the sector's first edge and see if it is within the allowed angle of view (<span class="math inline">\(2\theta\)</span>). However, we need the trigonometry function <code>acos</code> for this, which may be a costlier than doing a couple of cross products which involves only arithmetic operations.</p>
 <p>If an edge survived through the previous test, we put its endpoints through this test to classify where they stand. Figure 10 shows how the situation is now; the grey points are behind (1), red ones are beyond (2), green endpoints are within the sector (3) and the magenta one is in the bounding semicircle but outside the sector (4).</p>
 <figure>
 <img src="Figures/point_in_sector.svg" alt="Figure 10" /><figcaption>Figure 10</figcaption>
