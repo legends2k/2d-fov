@@ -115,6 +115,10 @@
      return vec2.fromValues(-v[1], v[0]);
  }
 
+ function areParallel(a, b) {
+     return (Math.abs(cross2d(a, b)) <= epsilon);
+ }
+
  // line should have start point, vector and square length
  function invLerp(line, point) {
      var t = vec2.create();
@@ -122,8 +126,16 @@
      return vec2.dot(t, line.vec) / line.len_2;
  }
 
- function areParallel(a, b) {
-     return (Math.abs(cross2d(a, b)) <= epsilon);
+ function isPointOnLine(pt, line) {
+     var v = vec2.create();
+     vec2.sub(v, pt, line.ends[0]);
+     return areParallel(v, line.vec);
+ }
+
+ function pointOnLine(line, t) {
+     var pt = vec2.create();
+     vec2.scaleAndAdd(pt, line.ends[0], line.vec, t);
+     return pt;
  }
 
  // rotates dir based on cosA and sinA both counter-clockwise and clockwise
@@ -179,12 +191,6 @@
      // not using <= since tangents to circle don't really intersect the circle;
      // also such an edge wouldn't affect the field of vision (sector)
      return pointSegShortestDistance(line, centre) < radius_2;
- }
-
- function pointOnLine(line, t) {
-     var pt = vec2.create();
-     vec2.scaleAndAdd(pt, line.ends[0], line.vec, t);
-     return pt;
  }
 
  var PointInSector = {
@@ -330,7 +336,12 @@
           * parameter t and an intersection point that can be checked by the
           * caller.
           */
-         if (isLine1Ray && shouldComputePoint) {
+
+         // if line1 is a ray and an intersection point is needed, then filter
+         // cases where line and ray are parallel, but the line isn't part of
+         // ray e.g. ---> ____ should be filterd, but ---> ----- should not be.
+         if (isLine1Ray && shouldComputePoint &&
+             isPointOnLine(line2.ends[0], line1)) {
              // find the ray origin position w.r.t the line segment
              var alpha = invLerp(line2, line1.ends[0]);
              // ray is originating within the segment
