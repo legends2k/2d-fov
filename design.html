@@ -7,7 +7,7 @@
   <meta name="author" content="Sundaram Ramaswamy">
   <title>Field of View and Line of Sight in 2D</title>
   <style type="text/css">code{white-space: pre;}</style>
-  <script src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_SVG" type="text/javascript"></script>
+  <script src="https://cdn.rawgit.com/mathjax/MathJax/2.7.1/MathJax.js?config=TeX-AMS-MML_SVG" type="text/javascript"></script>
   <!--[if lt IE 9]>
     <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
   <![endif]-->
@@ -19,9 +19,8 @@
 </header>
 <p><a href="&#x6d;&#x61;&#x69;&#108;&#116;&#x6f;&#58;&#108;&#x65;&#x67;&#x65;&#110;&#100;&#x73;&#50;&#x6b;&#64;&#x79;&#x61;&#104;&#x6f;&#x6f;&#46;&#x63;&#x6f;&#x6d;" class="email">&#108;&#x65;&#x67;&#x65;&#110;&#100;&#x73;&#50;&#x6b;&#64;&#x79;&#x61;&#104;&#x6f;&#x6f;&#46;&#x63;&#x6f;&#x6d;</a></p>
 <!-- Pandoc Markdown with LaTeX math equation -->
-<!-- $ pandoc design.md --email-obfuscation=references -t html5 -sNo design.html
---mathjax=https://cdn.mathjax.org/mathjax/
-latest/MathJax.js?config=TeX-AMS-MML_SVG -->
+<!-- $ pandoc design.md −−email-obfuscation=references -t html5 -sNo design.html
+   −−mathjax=https://cdn.rawgit.com/mathjax/MathJax/2.7.1/MathJax.js?config=TeX-AMS-MML_SVG -->
 <p>Consider a 2D world with polygonal buildings; the edges of the polygon are the building walls. Say a viewer is present in this world either indoor or outdoor. Given the observer's vision parameters — viewing direction, vision distance or the reach of sight and the angle of vision — we have to find the region visible to the observer i.e. the field of view (<em>FoV</em>) is to be determined. With no obstacles it would be a <a href="http://en.m.wikipedia.org/wiki/Circular_sector">sector</a>, made of two edges (radii) and a connecting arc; see figure 1. Additionally, given a point in the world, we should be able to quickly tell if this point is visible to the observer i.e. line of sight (<em>LOS</em>) queries on a given point should be serviced. Both these operations should be performed in a way efficient enough to use it in real-time rendering scenarios.</p>
 <figure>
 <img src="Figures/fov_no_obstacles.svg" alt="Figure 1" /><figcaption>Figure 1</figcaption>
