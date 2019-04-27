@@ -1051,28 +1051,21 @@
      window.requestAnimationFrame(mainLoop);
  }
 
- // http://stackoverflow.com/a/5932203/183120
- function relMouseCoords(event, element) {
-     var totalOffsetX = 0;
-     var totalOffsetY = 0;
-
-     do {
-         totalOffsetX += element.offsetLeft - element.scrollLeft;
-         totalOffsetY += element.offsetTop - element.scrollTop;
-     }
-     while (element = element.offsetParent);
-
-     return vec2.fromValues(event.pageX - totalOffsetX,
-                            event.pageY - totalOffsetY);
+ // http://stackoverflow.com/a/18053642
+ function getCursorPosition(event, element) {
+     var rect = element.getBoundingClientRect();
+     var x = event.clientX - rect.left;
+     var y = event.clientY - rect.top;
+     return vec2.fromValues(x, y);
  }
 
  function handleClick (e) {
-     scene.observer.loc = relMouseCoords(e, canvas);
+     scene.observer.loc = getCursorPosition(e, canvas);
      window.requestAnimationFrame(mainLoop);
  }
 
  function handleMouseMove (e) {
-     var lookAt = relMouseCoords(e, canvas);
+     var lookAt = getCursorPosition(e, canvas);
      setDirection(scene.observer, lookAt);
      window.requestAnimationFrame(mainLoop);
  }
